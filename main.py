@@ -21,7 +21,7 @@ def scan_ports(host,ports,timeout = 1.0,max_workers = 200):
 
     """创建线程池
     with退出时自动关闭线程池"""
-    with ThreadPoolExecutor(max_workers = max_workers) as excutor:
+    with ThreadPoolExecutor(max_workers = max_workers) as executor:
         """futures等待结果
         (…):port for port in ports字典推导式,key:future;value:port
         """
