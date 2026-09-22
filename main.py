@@ -2,6 +2,17 @@ import socket
 from concurrent.futures import ThreadPoolExecutor
 
 
+def parse_ports(s):
+    ports = []
+    for part in s.split(","):
+        if "-" in part:
+            start,end =part.split("-")
+            ports.extend(range(int(start),int(end) + 1))
+        else:
+            ports.append(int(part))
+    return ports
+
+
 """单线程单端口"""
 def scan_port(host,port,timeout = 1.0):
     sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -29,9 +40,8 @@ def scan_ports(host,ports,timeout = 1.0,max_workers = 200):
                    for port in ports}
         for future in futures:
             port = futures[future]
-            print(future.done())
+            
             if future.result():
-                print(future.done())
                 open_ports.append(port)
 
     open_ports.sort()
