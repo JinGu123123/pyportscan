@@ -1,5 +1,6 @@
 import socket
 from concurrent.futures import ThreadPoolExecutor
+import argparse
 
 
 def parse_ports(s):
@@ -47,10 +48,30 @@ def scan_ports(host,ports,timeout = 1.0,max_workers = 200):
     open_ports.sort()
     return open_ports
 
+
+def main():
+    parser = argparse.ArgumentParser(
+        description = "一个多线程TCP端口扫描器"
+    )
+
+    parser.add_argument("host",help = "目标主机(IP或域名)")
+    parser.add_argument("-p","--ports",default = "1-1024",
+                        help = "端口范围,如80或22,80,443,或1-1024")
+    parser.add_argument("-t","--timeout",type = float,default = "1.0",
+                        help = "连接超时秒数(默认1.0)")
+    parser.add_argument("-w","--workers",type = int,default = "100",
+                        help = "并发线程数(默认100)")
+
+
+    args = parser.parse_args()
+
+    ports = parse_ports(args.ports)
+
+
+    print(f"开始扫描{args.host},端口数{len(ports)}")
+    result = scan_ports(args.host,ports,args.timeout,args.workers)
+    print(f"开放端口{result}")
+
+
 if __name__ == "__main__":
-    import time
-    start = time.time()
-    result = scan_ports('192.168.31.21',range(1,1025),timeout = 1.0,max_workers = 200)
-    elpased = time.time() - start
-    print(f"开放端口：{result}")
-    print(f"扫描时间：{elpased:.2f}秒")
+    main()
