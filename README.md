@@ -8,7 +8,7 @@
 - [x] 多端口范围扫描
 - [x] 多线程并发加速
 - [x] 命令行参数（argparse）
-- [ ] Banner Grabbing 服务识别
+- [x] Banner Grabbing 服务识别
 - [ ] 单元测试
 
 ## 环境

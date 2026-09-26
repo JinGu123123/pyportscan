@@ -27,8 +27,48 @@ def scan_port(host,port,timeout = 1.0):
     finally:
         sock.close()
 
+
+def grab_banner(host,port,timeout = 2.0):
+    sock = None
+    try:
+        sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        sock.settimeout(1.0)
+        sock.connect((host,port))
+
+        try:
+            data = sock.recv(1024)
+
+            if data:
+                return data.decode(errors="ignore").strip()
+
+        except socket.timeout:
+            pass
+
+        try:
+            """Python 3.14的http.server更严格,拒绝HTTP/1.0请求
+            请求头加Host,版本协议为1,1
+            """
+            req = b"HEAD / HTTP/1.1\r\nHost:" + host.encode() + b"\r\nConnection:close\r\n\r\n"
+            sock.send(req)
+            data = sock.recv(1024)
+            if data:
+                return data.decode(errors="ignore")
+
+        except socket.timeout:
+            pass
+
+        return None
+
+    except (socket.error,OSError):
+        return None
+
+    finally:
+        if sock:
+            sock.close()
+
+
 """多线程多端口"""
-def scan_ports(host,ports,timeout = 1.0,max_workers = 200):
+def scan_ports(host,ports,timeout = 1.0,max_workers = 200,grab = False):
     open_ports = []
 
     """创建线程池
@@ -39,14 +79,24 @@ def scan_ports(host,ports,timeout = 1.0,max_workers = 200):
         """
         futures = {executor.submit(scan_port,host,port,timeout):port
                    for port in ports}
-        for future in futures:
-            port = futures[future]
+        for future,port in futures.items():
             
             if future.result():
                 open_ports.append(port)
 
-    open_ports.sort()
-    return open_ports
+    if not grab:
+        return sorted([(p,None) for p in open_ports])
+    
+    results = []
+    with ThreadPoolExecutor(max_workers = max_workers) as executor:
+        futures = {executor.submit(grab_banner,host,port,timeout):port
+                   for port in open_ports}
+        for future,port in futures.items():
+            banner = future.result()
+            results.append((port,banner))
+
+    results.sort()
+    return results
 
 
 def main():
@@ -69,8 +119,15 @@ def main():
 
 
     print(f"开始扫描{args.host},端口数{len(ports)}")
-    result = scan_ports(args.host,ports,args.timeout,args.workers)
-    print(f"开放端口{result}")
+    results = scan_ports(args.host,ports,args.timeout,args.workers,grab = True)
+    print(f"开放端口:")
+    for port,banner in results:
+        if banner:
+            first_line = banner.split("\n")[0]
+            print(f"{port}/tcp {first_line}")
+
+        else:
+            print(f"{port}/tcp (无法识别)")
 
 
 if __name__ == "__main__":
