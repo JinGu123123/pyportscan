@@ -17,3 +17,5 @@ Thumbs.db
 #项目输出
 *.log
 results/
+# pytest
+.pytest_cache/
