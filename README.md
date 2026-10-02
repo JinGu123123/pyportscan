@@ -10,7 +10,7 @@
 - [x] Banner Grabbing 服务识别
 - [x] 模块化设计，可作为 Python 库使用
 - [x] 单元测试覆盖核心逻辑
-- [ ] UDP 扫描（计划中）
+- [x] UDP 扫描（计划中）
 - [ ] 导出扫描结果到 JSON/CSV（计划中）
 
 ## 环境要求
@@ -46,6 +46,9 @@ python main.py 127.0.0.1 -p 22,80,8000-8100,3306
 # 不抓取 banner（更快）
 python main.py 127.0.0.1 -p 1-1024 --no-banner
 
+# UDP 扫描
+python main.py 127.0.0.1 -p 53,123,161 --udp
+
 # 查看帮助
 python main.py -h
 ```
@@ -59,6 +62,7 @@ python main.py -h
 | `-t, --timeout` | 连接超时（秒） | `1.0` |
 | `-w, --workers` | 并发线程数 | `100` |
 | `--no-banner` | 不抓取服务 banner | 关闭 |
+| `--udp` | 使用 UDP 扫描（默认 TCP） | 关闭 |
 | `-h, --help` | 显示帮助 | - |
 
 ### 示例输出
@@ -93,6 +97,10 @@ for port, banner in results:
 
 # 单独抓取某个端口的 banner
 banner = grab_banner("127.0.0.1", 8000)
+
+# UDP 扫描
+results = scan_ports("127.0.0.1", [53, 123], udp=True)
+# [(53, 'open|filtered'), ...]
 ```
 
 ## 项目结构
@@ -133,8 +141,9 @@ pytest tests/test_parse.py -v
 - [x] 阶段 4：命令行工具（argparse）
 - [x] 阶段 5：Banner Grabbing 服务识别
 - [x] 阶段 6：单元测试 + 项目整理
-- [ ] 阶段 7：进阶功能（UDP 扫描 / asyncio / C 语言 SYN 扫描）
-
+- [x] 阶段 7.1：UDP 扫描
+- [ ] 阶段 7.2：搭建 WSL2 开发环境
+- [ ] 阶段 7.3：C 语言 SYN 半开扫描
 ## 免责声明
 
 本工具仅供学习与授权测试使用。请勿用于未授权的目标，否则后果自负。
