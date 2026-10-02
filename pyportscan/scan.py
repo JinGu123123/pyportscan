@@ -15,7 +15,23 @@ def scan_port(host, port, timeout=1.0):
         sock.close()
 
 
-def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False):
+def udp_scan_port(host,port,timeout = 2.0):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    sock.settimeout(timeout)
+    try:
+        sock.sendto(b"",(host,port))
+        try:
+            data, _ = sock.recvfrom(1024)
+            return "open"
+        except socket.timeout:
+            return "open|filtered"
+        except (ConnectionRefusedError,ConnectionResetError):
+            return "closed"
+    finally:
+        sock.close()
+
+
+def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False,udp=False):
     """并发扫描多个端口。
 
     参数:
@@ -26,17 +42,33 @@ def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False):
         grab: 是否抓取 banner
 
     返回:
-        grab=False → [port, ...]
-        grab=True  → [(port, banner), ...]
+        TCP (udp=False):
+            grab=False → [(port, None), ...]（仅开放端口）
+            grab=True  → [(port, banner), ...]
+        UDP (udp=True):
+            [(port, state), ...]   # state ∈ {"open", "closed", "open|filtered"}
     """
     # 第一步：并发扫描端口
     open_ports = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(scan_port, host, port, timeout): port
-                   for port in ports}
-        for future, port in futures.items():
-            if future.result():
-                open_ports.append(port)
+        #UDP
+        if udp:
+            futures = {executor.submit(udp_scan_port,host,port,timeout):port
+                       for port in ports}
+            for future, port in futures.items():
+                state = future.result()
+                if state != "closed":
+                    open_ports.append((port,state))
+                    open_ports.sort()
+                    return open_ports
+            
+        #TCP
+        else:
+            futures = {executor.submit(scan_port, host, port, timeout): port
+                       for port in ports}
+            for future, port in futures.items():
+                 if future.result():
+                    open_ports.append(port)
 
     # 第二步：不抓 banner 直接返回
     if not grab:

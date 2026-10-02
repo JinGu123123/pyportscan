@@ -18,6 +18,8 @@ def main():
                         help="并发线程数（默认 100）")
     parser.add_argument("--no-banner", action="store_true",
                         help="不抓取服务 banner")
+    parser.add_argument("--udp",action="store_true",
+                        help="使用 UDP 扫描（默认TCP）")
 
     args = parser.parse_args()
 
@@ -27,17 +29,23 @@ def main():
     results = scan_ports(
         args.host, ports, args.timeout, args.workers,
         grab=not args.no_banner,
+        udp=args.udp
     )
 
     print("开放端口：")
-    for port, banner in results:
-        if banner:
-            first_line = banner.split("\n")[0]
-            if len(first_line) > 80:
-                first_line = first_line[:77] + "..."
-            print(f"  {port}/tcp  {first_line}")
+    for port, info in results:
+        if args.udp:
+            #UDP:info是状态字符串
+            print(f"{port}/udp {info}")
         else:
-            print(f"  {port}/tcp  (无法识别)")
+            #TCP:info是banner或None
+            if info:
+                first_line = info.split("\n")[0]
+                if len(first_line) > 80:
+                    first_line = first_line[:77] + "..."
+                print(f"  {port}/tcp  {first_line}")
+            else:
+                print(f"  {port}/tcp  (无法识别)")
 
 
 if __name__ == "__main__":
