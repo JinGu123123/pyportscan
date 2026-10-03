@@ -18,6 +18,25 @@
 - Python 3.8+
 - 依赖见 `requirements.txt`
 
+## 开发环境
+
+### Python 部分
+- Python 3.8+
+- pytest（测试）
+
+### C 语言 SYN 扫描（阶段 7.3 准备）
+- WSL2（Windows Subsystem for Linux 2）
+- Ubuntu 26.04 LTS
+- gcc 15.2.0
+- make 4.4.1
+- libpcap-dev
+
+#### 在 WSL2 里安装
+
+```bash
+sudo apt update
+sudo apt install -y gcc make libpcap-dev
+
 ## 安装
 
 ```bash
@@ -142,7 +161,7 @@ pytest tests/test_parse.py -v
 - [x] 阶段 5：Banner Grabbing 服务识别
 - [x] 阶段 6：单元测试 + 项目整理
 - [x] 阶段 7.1：UDP 扫描
-- [ ] 阶段 7.2：搭建 WSL2 开发环境
+- [x] 阶段 7.2：搭建 WSL2 开发环境
 - [ ] 阶段 7.3：C 语言 SYN 半开扫描
 ## 免责声明
 
