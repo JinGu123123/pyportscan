@@ -1,2 +1,5 @@
+# 编译产物
 syn_scan
+syn_scan_core
+syn_scan_wsl2
 *.o
