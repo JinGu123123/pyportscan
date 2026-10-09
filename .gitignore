@@ -25,3 +25,7 @@ results/
 .coverage
 coverage.xml
 htmlcov/
+
+# 扫描结果文件
+*.json
+!package.json
