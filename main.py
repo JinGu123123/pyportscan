@@ -4,6 +4,39 @@ import argparse
 
 from pyportscan import parse_ports, scan_ports
 
+import json
+from datetime import datetime
+
+
+def output_text(host, results, is_udp):
+    """文本格式输出"""
+    print(f"开放端口：")
+    for port, info in results:
+        if is_udp:
+            print(f"  {port}/udp  {info}")
+        else:
+            if info:
+                first_line = info.split("\n")[0]
+                if len(first_line) > 80:
+                    first_line = first_line[:77] + "..."
+                print(f"  {port}/tcp  {first_line}")
+            else:
+                print(f"  {port}/tcp  (无法识别)")
+
+
+def output_json(host, results, elapsed, is_udp):
+    """JSON 格式输出"""
+    data = {
+        "host": host,
+        "scan_time": datetime.now().isoformat(timespec="seconds"),
+        "duration_seconds": round(elapsed, 3),
+        "protocol": "udp" if is_udp else "tcp",
+        "open_ports": [
+            {"port": p, "banner": b} for p, b in results
+        ],
+    }
+    print(json.dumps(data, ensure_ascii=False, indent=2))
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -20,33 +53,29 @@ def main():
                         help="不抓取服务 banner")
     parser.add_argument("--udp",action="store_true",
                         help="使用 UDP 扫描（默认TCP）")
+    parser.add_argument("--json", action="store_true",
+                        help="以 JSON 格式输出结果")
 
     args = parser.parse_args()
 
     ports = parse_ports(args.ports)
 
-    print(f"开始扫描 {args.host}，端口数 {len(ports)}")
+    import time
+    if not args.json:
+        print(f"开始扫描 {args.host}，端口数 {len(ports)}")
+
+    start = time.time()
     results = scan_ports(
         args.host, ports, args.timeout, args.workers,
         grab=not args.no_banner,
-        udp=args.udp
+        udp=args.udp,
     )
+    elapsed = time.time() - start
 
-    print("开放端口：")
-    for port, info in results:
-        if args.udp:
-            #UDP:info是状态字符串
-            print(f"{port}/udp {info}")
-        else:
-            #TCP:info是banner或None
-            if info:
-                first_line = info.split("\n")[0]
-                if len(first_line) > 80:
-                    first_line = first_line[:77] + "..."
-                print(f"  {port}/tcp  {first_line}")
-            else:
-                print(f"  {port}/tcp  (无法识别)")
-
+    if args.json:
+        output_json(args.host, results, elapsed, args.udp)
+    else:
+        output_text(args.host, results, args.udp)
 
 if __name__ == "__main__":
     main()
