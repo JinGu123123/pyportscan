@@ -38,6 +38,22 @@ def build_json(host, results, elapsed, is_udp):
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
+def make_progress_callback():
+    #构造一个进度回调（节流：每100个端口或每5%打印一次）
+    last_printed = [0]
+
+    def callback(done,total,open_ports):
+        step = max(100,total // 20)
+        if done - last_printed[0] < step and done != total:
+            return
+
+        last_printed[0] = done
+        pct = done * 100 / total
+        print(f"[.]进度:{done}/{total}({pct:.1f}%) - 已发现{len(open_ports)}个开放端口")
+
+    return callback
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="一个多线程 TCP 端口扫描器"
@@ -57,6 +73,8 @@ def main():
                         help="以 JSON 格式输出结果")
     parser.add_argument("--output", "-o", metavar="FILE",
                         help="将结果写入文件（需配合 --json）")
+    parser.add_argument("-v","--verbose",action="store_true",
+                        help="显示详细进度")
 
     args = parser.parse_args()
 
@@ -66,14 +84,21 @@ def main():
     ports = parse_ports(args.ports)
 
     import time
-    if not args.json:
-        print(f"开始扫描 {args.host}，端口数 {len(ports)}")
+    if not args.json and args.verbose:
+        print(f"[*]开始扫描 {args.host}")
+        print(f"[*]端口范围:{args.ports}(共{len(ports)}个)")
+        print(f"[*]并发:{args.workers}线程,超时{args.timeout}秒")
+
+
+    on_progress = make_progress_callback() if (args.verbose and not args.json) else None
+
 
     start = time.time()
     results = scan_ports(
         args.host, ports, args.timeout, args.workers,
         grab=not args.no_banner,
         udp=args.udp,
+        on_progress=on_progress
     )
     elapsed = time.time() - start
 
@@ -86,6 +111,8 @@ def main():
         else:
             print(json_str)
     else:
+        if args.verbose and not args.json:
+            print(f"[+]扫描完成:{len(results)}个开放端口,耗时{elapsed:.2f}秒")
         output_text(args.host, results, args.udp)
 
 if __name__ == "__main__":

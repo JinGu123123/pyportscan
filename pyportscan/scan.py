@@ -31,7 +31,12 @@ def udp_scan_port(host,port,timeout = 2.0):
         sock.close()
 
 
-def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False,udp=False):
+def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False,udp=False,on_progress=None):
+    """
+    on_prograss:可选回调，每扫完一个端口调用一次
+                签名：on_progress(done,total,open_ports)
+    """
+
     """并发扫描多个端口。
 
     参数:
@@ -48,27 +53,40 @@ def scan_ports(host, ports, timeout=1.0, max_workers=200, grab=False,udp=False):
         UDP (udp=True):
             [(port, state), ...]   # state ∈ {"open", "closed", "open|filtered"}
     """
+
+    ports = list(ports)
+    total = len(ports)
+    done = 0
+
     # 第一步：并发扫描端口
     open_ports = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        #UDP
-        if udp:
+    #UDP
+    if udp:
+        results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(udp_scan_port,host,port,timeout):port
                        for port in ports}
             for future, port in futures.items():
+                done += 1
+                if on_progress:
+                    on_progress(done,total,results)
                 state = future.result()
                 if state != "closed":
-                    open_ports.append((port,state))
-                    open_ports.sort()
-                    return open_ports
+                    results.append((port,state))
+        results.sort()
+        return results        
+
             
-        #TCP
-        else:
-            futures = {executor.submit(scan_port, host, port, timeout): port
-                       for port in ports}
-            for future, port in futures.items():
-                 if future.result():
-                    open_ports.append(port)
+    #TCP
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(scan_port, host, port, timeout): port
+                    for port in ports}
+        for future, port in futures.items():
+            done += 1
+            if on_progress:
+                on_progress(done,total,open_ports)
+            if future.result():
+                open_ports.append(port)
 
     # 第二步：不抓 banner 直接返回
     if not grab:
