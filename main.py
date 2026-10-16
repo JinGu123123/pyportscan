@@ -59,8 +59,6 @@ def main():
         description="一个多线程 TCP 端口扫描器"
     )
     parser.add_argument("host", help="目标主机（IP 或域名）")
-    parser.add_argument("-p", "--ports", default="1-1024",
-                        help="端口范围，如 80 或 22,80,443 或 1-1024（默认 1-1024）")
     parser.add_argument("-t", "--timeout", type=float, default=1.0,
                         help="连接超时秒数（默认 1.0）")
     parser.add_argument("-w", "--workers", type=int, default=100,
@@ -75,18 +73,44 @@ def main():
                         help="将结果写入文件（需配合 --json）")
     parser.add_argument("-v","--verbose",action="store_true",
                         help="显示详细进度")
+    parser.add_argument("--exclude-ports",metavar="PORTS",
+                        help="排除指定端口,如135,445或1000-2000")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-p", "--ports", default=None,
+                        help="端口范围，如 80 或 22,80,443 或 1-1024")
+    group.add_argument("--top-ports",type=int,metavar="N",
+                        help="扫描最常用的N个端口(100)")
+
 
     args = parser.parse_args()
+
+
+    from pyportscan.ports import TOP_PORTS
+
+    if args.top_ports:
+        n = min(args.top_ports,len(TOP_PORTS))
+        ports = TOP_PORTS[:n]
+    elif args.ports:
+        ports = parse_ports(args.ports)
+    else:
+        ports = list(range(1,1025))
+
+
+    if args.exclude_ports:
+        exclude = set(parse_ports(args.exclude_ports))
+        ports = [p for p in ports if p not in exclude]
+
 
     if args.output and not args.json:
         parser.error("--output 需要配合 --json 使用")
 
-    ports = parse_ports(args.ports)
+
 
     import time
     if not args.json and args.verbose:
         print(f"[*]开始扫描 {args.host}")
-        print(f"[*]端口范围:{args.ports}(共{len(ports)}个)")
+        print(f"[*]端口数:{len(ports)}个")
         print(f"[*]并发:{args.workers}线程,超时{args.timeout}秒")
 
 
