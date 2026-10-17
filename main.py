@@ -1,6 +1,7 @@
 """pyportscan 命令行入口"""
 
 import argparse
+import time
 
 from pyportscan import parse_ports, scan_ports
 
@@ -58,23 +59,25 @@ def main():
     parser = argparse.ArgumentParser(
         description="一个多线程 TCP 端口扫描器"
     )
-    parser.add_argument("host", help="目标主机（IP 或域名）")
+    parser.add_argument("host", help="目标主机(IP 或域名)")
     parser.add_argument("-t", "--timeout", type=float, default=1.0,
-                        help="连接超时秒数（默认 1.0）")
+                        help="连接超时秒数(默认 1.0)")
     parser.add_argument("-w", "--workers", type=int, default=100,
-                        help="并发线程数（默认 100）")
+                        help="并发线程数(默认 100)")
     parser.add_argument("--no-banner", action="store_true",
                         help="不抓取服务 banner")
     parser.add_argument("--udp",action="store_true",
-                        help="使用 UDP 扫描（默认TCP）")
+                        help="使用 UDP 扫描(默认TCP)")
     parser.add_argument("--json", action="store_true",
                         help="以 JSON 格式输出结果")
     parser.add_argument("--output", "-o", metavar="FILE",
-                        help="将结果写入文件（需配合 --json）")
+                        help="将结果写入文件(需配合 --json)")
     parser.add_argument("-v","--verbose",action="store_true",
                         help="显示详细进度")
     parser.add_argument("--exclude-ports",metavar="PORTS",
                         help="排除指定端口,如135,445或1000-2000")
+    parser.add_argument("--async-mode",action="store_true",dest="use_async",
+                        help="使用asyncio异步扫描(默认多线程)")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-p", "--ports", default=None,
@@ -97,6 +100,14 @@ def main():
         ports = list(range(1,1025))
 
 
+    if args.use_async:
+        if args.udp:
+            parser.error("--async-mode暂不支持--udp")
+        if not args.no_banner:
+            print("[!]注意：--async-mode暂不抓取banner")
+
+
+
     if args.exclude_ports:
         exclude = set(parse_ports(args.exclude_ports))
         ports = [p for p in ports if p not in exclude]
@@ -107,25 +118,41 @@ def main():
 
 
 
-    import time
     if not args.json and args.verbose:
         print(f"[*]开始扫描 {args.host}")
         print(f"[*]端口数:{len(ports)}个")
-        print(f"[*]并发:{args.workers}线程,超时{args.timeout}秒")
+    if args.use_async:
+        print(f"[*]模式：asyncio异步(并发{args.workers * 5})")
+    else:
+        print(f"[*]模式：多线程(并发{args.workers})")
+    print(f"[*]超时：{args.timeout}秒")
 
 
-    on_progress = make_progress_callback() if (args.verbose and not args.json) else None
-
-
+    #=====扫描入口=====
     start = time.time()
-    results = scan_ports(
-        args.host, ports, args.timeout, args.workers,
-        grab=not args.no_banner,
-        udp=args.udp,
-        on_progress=on_progress
-    )
+
+    if args.use_async:
+        import asyncio
+        from pyportscan.scan_async import scan_ports_async
+
+        results = asyncio.run(scan_ports_async(
+            args.host,ports,
+            timeout=args.timeout,
+            max_concurrent=args.workers * 5,
+        ))
+    else:
+        on_progress = make_progress_callback() if (args.verbose and not args.json) else None
+        results = scan_ports(
+            args.host,ports,args.timeout,args.workers,
+            grab=args.no_banner,
+            udp=args.udp,
+            on_progress=on_progress,
+        )
+
     elapsed = time.time() - start
 
+
+    #=====输出结果=====
     if args.json:
         json_str = build_json(args.host, results, elapsed, args.udp)
         if args.output:
