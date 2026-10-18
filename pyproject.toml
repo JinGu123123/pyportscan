@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyportscan"
+version = "1.2.0"
+description = "A multi-threaded Python port scanner with async support and banner grabbing."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "JinGu123123", email = "gujin123123@outlook.com" }
+]
+keywords = ["port-scanner", "network", "security", "asyncio"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://github.com/JinGu123123/pyportscan"
+Issues = "https://github.com/JinGu123123/pyportscan/issues"
+
+[project.scripts]
+pyportscan = "main:main"
+
+[tool.setuptools.packages.find]
+include = ["pyportscan*"]
+exclude = ["c_syn_scan*", "tests*"]
