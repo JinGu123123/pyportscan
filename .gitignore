@@ -29,3 +29,7 @@ htmlcov/
 # 扫描结果文件
 *.json
 !package.json
+
+dist/
+build/
+*.egg-info/
