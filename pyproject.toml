@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyportscan"
-version = "1.2.0"
+version = "1.2.1"
 description = "A multi-threaded Python port scanner with async support and banner grabbing."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -25,7 +25,7 @@ Homepage = "https://github.com/JinGu123123/pyportscan"
 Issues = "https://github.com/JinGu123123/pyportscan/issues"
 
 [project.scripts]
-pyportscan = "main:main"
+pyportscan = "pyportscan.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["pyportscan*"]
